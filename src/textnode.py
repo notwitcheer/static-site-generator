@@ -82,3 +82,83 @@ def extract_markdown_links(text):
     pattern = r"(?<!!)\[([^\[\]]*?)\]\(([^\(\)]*?)\)"
     matches = re.findall(pattern, text)
     return matches
+
+
+def split_nodes_image(old_nodes):
+    new_nodes = []
+
+    for old_node in old_nodes:
+        if old_node.text_type != TextType.TEXT:
+            new_nodes.append(old_node)
+            continue
+
+        text = old_node.text
+        images = extract_markdown_images(text)
+
+        if not images:
+            new_nodes.append(old_node)
+            continue
+
+        current_text = text
+        for alt_text, url in images:
+            full_image_markdown = f"![{alt_text}]({url})"
+
+            parts = current_text.split(full_image_markdown, 1)
+
+            if len(parts) != 2:
+                continue
+
+            before_text = parts[0]
+            after_text = parts[1]
+
+            if before_text:
+                new_nodes.append(TextNode(before_text, TextType.TEXT))
+
+            new_nodes.append(TextNode(alt_text, TextType.IMAGE, url))
+
+            current_text = after_text
+
+        if current_text:
+            new_nodes.append(TextNode(current_text, TextType.TEXT))
+
+    return new_nodes
+
+
+def split_nodes_link(old_nodes):
+    new_nodes = []
+
+    for old_node in old_nodes:
+        if old_node.text_type != TextType.TEXT:
+            new_nodes.append(old_node)
+            continue
+
+        text = old_node.text
+        links = extract_markdown_links(text)
+
+        if not links:
+            new_nodes.append(old_node)
+            continue
+
+        current_text = text
+        for link_text, url in links:
+            full_link_markdown = f"[{link_text}]({url})"
+
+            parts = current_text.split(full_link_markdown, 1)
+
+            if len(parts) != 2:
+                continue
+
+            before_text = parts[0]
+            after_text = parts[1]
+
+            if before_text:
+                new_nodes.append(TextNode(before_text, TextType.TEXT))
+
+            new_nodes.append(TextNode(link_text, TextType.LINK, url))
+
+            current_text = after_text
+
+        if current_text:
+            new_nodes.append(TextNode(current_text, TextType.TEXT))
+
+    return new_nodes
