@@ -1,6 +1,6 @@
 import unittest
 
-from textnode import TextNode, TextType, text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link
+from textnode import TextNode, TextType, text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes
 from htmlnode import LeafNode
 
 
@@ -584,6 +584,128 @@ class TestSplitNodesLink(unittest.TestCase):
             TextNode("Boot.dev - Learn to Code!", TextType.LINK, "https://boot.dev"),
         ]
         self.assertListEqual(expected, new_nodes)
+
+
+class TestTextToTextnodes(unittest.TestCase):
+    def test_text_to_textnodes_full_example(self):
+        text = "This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("text", TextType.BOLD),
+            TextNode(" with an ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" word and a ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(" and an ", TextType.TEXT),
+            TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+            TextNode(" and a ", TextType.TEXT),
+            TextNode("link", TextType.LINK, "https://boot.dev"),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_plain_text(self):
+        text = "This is just plain text with no markdown"
+        nodes = text_to_textnodes(text)
+        expected = [TextNode("This is just plain text with no markdown", TextType.TEXT)]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_only_bold(self):
+        text = "This is **bold** text"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+            TextNode(" text", TextType.TEXT),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_only_italic(self):
+        text = "This is *italic* text"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" text", TextType.TEXT),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_only_code(self):
+        text = "This is `code` text"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("code", TextType.CODE),
+            TextNode(" text", TextType.TEXT),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_only_image(self):
+        text = "This has ![image](url.png)"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("This has ", TextType.TEXT),
+            TextNode("image", TextType.IMAGE, "url.png"),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_only_link(self):
+        text = "This has [link](https://example.com)"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("This has ", TextType.TEXT),
+            TextNode("link", TextType.LINK, "https://example.com"),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_mixed_formatting(self):
+        text = "**Bold** and *italic* and `code`"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("Bold", TextType.BOLD),
+            TextNode(" and ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" and ", TextType.TEXT),
+            TextNode("code", TextType.CODE),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_image_and_link(self):
+        text = "![image](img.png) and [link](url.com)"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("image", TextType.IMAGE, "img.png"),
+            TextNode(" and ", TextType.TEXT),
+            TextNode("link", TextType.LINK, "url.com"),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_empty_string(self):
+        text = ""
+        nodes = text_to_textnodes(text)
+        expected = [TextNode("", TextType.TEXT)]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_multiple_same_type(self):
+        text = "**bold1** and **bold2** text"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("bold1", TextType.BOLD),
+            TextNode(" and ", TextType.TEXT),
+            TextNode("bold2", TextType.BOLD),
+            TextNode(" text", TextType.TEXT),
+        ]
+        self.assertListEqual(expected, nodes)
+
+    def test_text_to_textnodes_adjacent_formatting(self):
+        text = "**bold***italic*`code`"
+        nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("bold", TextType.BOLD),
+            TextNode("italic", TextType.ITALIC),
+            TextNode("code", TextType.CODE),
+        ]
+        self.assertListEqual(expected, nodes)
 
 
 if __name__ == "__main__":
