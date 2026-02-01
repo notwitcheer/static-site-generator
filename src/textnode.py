@@ -10,6 +10,16 @@ class TextType(Enum):
     LINK = "link"
     IMAGE = "image"
 
+
+class BlockType(Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    CODE = "code"
+    QUOTE = "quote"
+    UNORDERED_LIST = "unordered_list"
+    ORDERED_LIST = "ordered_list"
+
+
 class TextNode:
     def __init__(self, text, text_type, url=None):
         self.text = text
@@ -186,3 +196,49 @@ def markdown_to_blocks(markdown):
             filtered_blocks.append(stripped_block)
 
     return filtered_blocks
+
+
+def block_to_block_type(block):
+    lines = block.split('\n')
+
+    # Check for heading (1-6 # characters followed by space)
+    if block.startswith('#'):
+        # Count leading # characters
+        hash_count = 0
+        for char in block:
+            if char == '#':
+                hash_count += 1
+            else:
+                break
+
+        # Must be 1-6 # characters followed by a space
+        if 1 <= hash_count <= 6 and len(block) > hash_count and block[hash_count] == ' ':
+            return BlockType.HEADING
+
+    # Check for code block (starts with ``` and ends with ```)
+    if len(lines) > 1 and block.startswith('```') and block.endswith('```'):
+        return BlockType.CODE
+
+    # Check for quote block (every line starts with >)
+    if all(line.startswith('>') for line in lines):
+        return BlockType.QUOTE
+
+    # Check for unordered list (every line starts with - followed by space)
+    if all(line.startswith('- ') for line in lines):
+        return BlockType.UNORDERED_LIST
+
+    # Check for ordered list (lines start with number. followed by space, incrementing from 1)
+    if len(lines) > 0:
+        is_ordered_list = True
+        for i, line in enumerate(lines):
+            expected_number = i + 1
+            expected_start = f"{expected_number}. "
+            if not line.startswith(expected_start):
+                is_ordered_list = False
+                break
+
+        if is_ordered_list:
+            return BlockType.ORDERED_LIST
+
+    # Default to paragraph
+    return BlockType.PARAGRAPH
