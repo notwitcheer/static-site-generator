@@ -1,6 +1,6 @@
 import re
 from enum import Enum
-from htmlnode import LeafNode
+from htmlnode import LeafNode, ParentNode
 
 class TextType(Enum):
     TEXT = "text"
@@ -87,6 +87,7 @@ def text_to_textnodes(text):
 
     nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD)
     nodes = split_nodes_delimiter(nodes, "*", TextType.ITALIC)
+    nodes = split_nodes_delimiter(nodes, "_", TextType.ITALIC)
     nodes = split_nodes_delimiter(nodes, "`", TextType.CODE)
     nodes = split_nodes_image(nodes)
     nodes = split_nodes_link(nodes)
@@ -242,3 +243,104 @@ def block_to_block_type(block):
 
     # Default to paragraph
     return BlockType.PARAGRAPH
+
+
+def text_to_children(text):
+    text_nodes = text_to_textnodes(text)
+    children = []
+    for text_node in text_nodes:
+        html_node = text_node_to_html_node(text_node)
+        children.append(html_node)
+    return children
+
+
+def paragraph_to_html_node(block):
+    lines = block.split("\n")
+    paragraph_text = " ".join(lines)
+    children = text_to_children(paragraph_text)
+    return ParentNode("p", children)
+
+
+def heading_to_html_node(block):
+    level = 0
+    for char in block:
+        if char == "#":
+            level += 1
+        else:
+            break
+
+    if level < 1 or level > 6:
+        raise ValueError(f"Invalid heading level: {level}")
+
+    text = block[level + 1:]  # Skip the hashes and space
+    children = text_to_children(text)
+    return ParentNode(f"h{level}", children)
+
+
+def code_to_html_node(block):
+    if not block.startswith("```") or not block.endswith("```"):
+        raise ValueError("Invalid code block")
+
+    text = block[4:-3]  # Remove ``` from start and end, plus newline after opening ```
+    code_node = LeafNode("code", text)
+    return ParentNode("pre", [code_node])
+
+
+def quote_to_html_node(block):
+    lines = block.split("\n")
+    new_lines = []
+    for line in lines:
+        if not line.startswith(">"):
+            raise ValueError("Invalid quote block")
+        new_lines.append(line[1:].lstrip())  # Remove > and any following space
+
+    content = "\n".join(new_lines)
+    children = text_to_children(content)
+    return ParentNode("blockquote", children)
+
+
+def unordered_list_to_html_node(block):
+    items = block.split("\n")
+    html_items = []
+    for item in items:
+        text = item[2:]  # Remove "- "
+        children = text_to_children(text)
+        html_items.append(ParentNode("li", children))
+    return ParentNode("ul", html_items)
+
+
+def ordered_list_to_html_node(block):
+    items = block.split("\n")
+    html_items = []
+    for item in items:
+        # Find the first space after the number and period
+        first_space = item.find(". ") + 2
+        text = item[first_space:]
+        children = text_to_children(text)
+        html_items.append(ParentNode("li", children))
+    return ParentNode("ol", html_items)
+
+
+def markdown_to_html_node(markdown):
+    blocks = markdown_to_blocks(markdown)
+    children = []
+
+    for block in blocks:
+        block_type = block_to_block_type(block)
+
+        if block_type == BlockType.PARAGRAPH:
+            children.append(paragraph_to_html_node(block))
+        elif block_type == BlockType.HEADING:
+            children.append(heading_to_html_node(block))
+        elif block_type == BlockType.CODE:
+            children.append(code_to_html_node(block))
+        elif block_type == BlockType.QUOTE:
+            children.append(quote_to_html_node(block))
+        elif block_type == BlockType.UNORDERED_LIST:
+            children.append(unordered_list_to_html_node(block))
+        elif block_type == BlockType.ORDERED_LIST:
+            children.append(ordered_list_to_html_node(block))
+        else:
+            raise ValueError(f"Invalid block type: {block_type}")
+
+    return ParentNode("div", children)
