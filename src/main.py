@@ -1,6 +1,6 @@
 import os
 import shutil
-from textnode import TextNode, TextType
+from textnode import TextNode, TextType, markdown_to_html_node, extract_title
 
 
 def copy_static_to_public(src_path, dest_path):
@@ -36,6 +36,38 @@ def _copy_directory_contents(src_path, dest_path):
             _copy_directory_contents(src_item_path, dest_item_path)
 
 
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+
+    # Read the markdown file
+    with open(from_path, 'r', encoding='utf-8') as f:
+        markdown_content = f.read()
+
+    # Read the template file
+    with open(template_path, 'r', encoding='utf-8') as f:
+        template_content = f.read()
+
+    # Convert markdown to HTML
+    html_node = markdown_to_html_node(markdown_content)
+    html_content = html_node.to_html()
+
+    # Extract title
+    title = extract_title(markdown_content)
+
+    # Replace placeholders in template
+    final_html = template_content.replace("{{ Title }}", title)
+    final_html = final_html.replace("{{ Content }}", html_content)
+
+    # Ensure destination directory exists
+    dest_dir = os.path.dirname(dest_path)
+    if dest_dir and not os.path.exists(dest_dir):
+        os.makedirs(dest_dir)
+
+    # Write the final HTML file
+    with open(dest_path, 'w', encoding='utf-8') as f:
+        f.write(final_html)
+
+
 def main():
     # Copy static files to public directory
     # Get the directory where this script is located
@@ -47,6 +79,14 @@ def main():
     print("Starting static site generation...")
     copy_static_to_public(static_path, public_path)
     print("Static files copied successfully!")
+
+    # Generate the index page
+    content_index_path = os.path.join(project_root, "content", "index.md")
+    template_path = os.path.join(project_root, "template.html")
+    dest_index_path = os.path.join(public_path, "index.html")
+
+    generate_page(content_index_path, template_path, dest_index_path)
+    print("Index page generated successfully!")
 
     # Example TextNode functionality (keeping for testing)
     node = TextNode("This is some anchor text", TextType.LINK, "https://www.boot.dev")

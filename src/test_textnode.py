@@ -1,6 +1,6 @@
 import unittest
 
-from textnode import TextNode, TextType, BlockType, text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type, markdown_to_html_node
+from textnode import TextNode, TextType, BlockType, text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type, markdown_to_html_node, extract_title
 from htmlnode import LeafNode
 
 
@@ -1165,6 +1165,89 @@ that should be joined."""
             html,
             "<div><h1>Heading 1</h1><h2>Heading 2</h2><h3>Heading 3</h3><h4>Heading 4</h4><h5>Heading 5</h5><h6>Heading 6</h6></div>",
         )
+
+
+class TestExtractTitle(unittest.TestCase):
+    def test_extract_title_basic(self):
+        markdown = "# Hello"
+        title = extract_title(markdown)
+        self.assertEqual(title, "Hello")
+
+    def test_extract_title_with_whitespace(self):
+        markdown = "#   Hello World   "
+        title = extract_title(markdown)
+        self.assertEqual(title, "Hello World")
+
+    def test_extract_title_with_content_after(self):
+        markdown = """# Main Title
+
+This is some content after the title.
+
+## Subtitle
+
+More content here."""
+        title = extract_title(markdown)
+        self.assertEqual(title, "Main Title")
+
+    def test_extract_title_no_h1_raises_exception(self):
+        markdown = """## This is h2
+
+This is just paragraph text.
+
+### This is h3"""
+        with self.assertRaises(Exception) as context:
+            extract_title(markdown)
+        self.assertEqual(str(context.exception), "No h1 header found")
+
+    def test_extract_title_empty_h1(self):
+        markdown = "# "
+        title = extract_title(markdown)
+        self.assertEqual(title, "")
+
+    def test_extract_title_h1_with_formatting(self):
+        markdown = "# **Bold** and _italic_ title"
+        title = extract_title(markdown)
+        self.assertEqual(title, "**Bold** and _italic_ title")
+
+    def test_extract_title_multiple_h1_returns_first(self):
+        markdown = """# First Title
+
+Some content
+
+# Second Title
+
+More content"""
+        title = extract_title(markdown)
+        self.assertEqual(title, "First Title")
+
+    def test_extract_title_h1_in_middle(self):
+        markdown = """## Subtitle first
+
+Some paragraph content.
+
+# Main Title
+
+More content here."""
+        title = extract_title(markdown)
+        self.assertEqual(title, "Main Title")
+
+    def test_extract_title_only_h2_and_above(self):
+        markdown = """## Heading 2
+
+### Heading 3
+
+#### Heading 4
+
+Content without h1."""
+        with self.assertRaises(Exception) as context:
+            extract_title(markdown)
+        self.assertEqual(str(context.exception), "No h1 header found")
+
+    def test_extract_title_h1_without_space_is_not_valid(self):
+        markdown = "#NotAValidHeading"
+        with self.assertRaises(Exception) as context:
+            extract_title(markdown)
+        self.assertEqual(str(context.exception), "No h1 header found")
 
 
 if __name__ == "__main__":

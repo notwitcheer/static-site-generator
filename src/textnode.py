@@ -344,3 +344,18 @@ def markdown_to_html_node(markdown):
             raise ValueError(f"Invalid block type: {block_type}")
 
     return ParentNode("div", children)
+
+
+def extract_title(markdown):
+    lines = markdown.strip().split('\n')
+
+    for line in lines:
+        stripped_line = line.strip()
+        if stripped_line.startswith('# ') or stripped_line == '#':
+            if not stripped_line.startswith('## '):
+                if stripped_line == '#':
+                    return ""
+                title = stripped_line[2:].strip()
+                return title
+
+    raise Exception("No h1 header found")
