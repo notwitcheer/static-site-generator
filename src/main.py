@@ -68,6 +68,32 @@ def generate_page(from_path, template_path, dest_path):
         f.write(final_html)
 
 
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    # Get the original content root for calculating relative paths
+    if not hasattr(generate_pages_recursive, 'content_root'):
+        generate_pages_recursive.content_root = dir_path_content
+
+    # List all items in the content directory
+    items = os.listdir(dir_path_content)
+
+    for item in items:
+        src_item_path = os.path.join(dir_path_content, item)
+
+        if os.path.isfile(src_item_path):
+            if item.endswith('.md'):
+                # Calculate the relative path from the original content root
+                rel_path = os.path.relpath(src_item_path, generate_pages_recursive.content_root)
+                # Change .md to .html
+                html_filename = os.path.splitext(rel_path)[0] + '.html'
+                dest_item_path = os.path.join(dest_dir_path, html_filename)
+
+                # Generate the page
+                generate_page(src_item_path, template_path, dest_item_path)
+        elif os.path.isdir(src_item_path):
+            # Recursively process subdirectories
+            generate_pages_recursive(src_item_path, template_path, dest_dir_path)
+
+
 def main():
     # Copy static files to public directory
     # Get the directory where this script is located
@@ -80,13 +106,12 @@ def main():
     copy_static_to_public(static_path, public_path)
     print("Static files copied successfully!")
 
-    # Generate the index page
-    content_index_path = os.path.join(project_root, "content", "index.md")
+    # Generate all pages recursively
+    content_path = os.path.join(project_root, "content")
     template_path = os.path.join(project_root, "template.html")
-    dest_index_path = os.path.join(public_path, "index.html")
 
-    generate_page(content_index_path, template_path, dest_index_path)
-    print("Index page generated successfully!")
+    generate_pages_recursive(content_path, template_path, public_path)
+    print("All pages generated successfully!")
 
     # Example TextNode functionality (keeping for testing)
     node = TextNode("This is some anchor text", TextType.LINK, "https://www.boot.dev")

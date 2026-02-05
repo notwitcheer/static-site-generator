@@ -1,4 +1,4 @@
-# Why Tom Bombadil WaMistake
+# Why Tom Bombadil Was a Mistake
 
 [< Back Home](/)
 
