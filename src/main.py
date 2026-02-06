@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 from textnode import TextNode, TextType, markdown_to_html_node, extract_title
 
 
@@ -36,7 +37,7 @@ def _copy_directory_contents(src_path, dest_path):
             _copy_directory_contents(src_item_path, dest_item_path)
 
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath="/"):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
 
     # Read the markdown file
@@ -58,6 +59,10 @@ def generate_page(from_path, template_path, dest_path):
     final_html = template_content.replace("{{ Title }}", title)
     final_html = final_html.replace("{{ Content }}", html_content)
 
+    # Replace href and src attributes with basepath
+    final_html = final_html.replace('href="/', f'href="{basepath}')
+    final_html = final_html.replace('src="/', f'src="{basepath}')
+
     # Ensure destination directory exists
     dest_dir = os.path.dirname(dest_path)
     if dest_dir and not os.path.exists(dest_dir):
@@ -68,7 +73,7 @@ def generate_page(from_path, template_path, dest_path):
         f.write(final_html)
 
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath="/"):
     # Get the original content root for calculating relative paths
     if not hasattr(generate_pages_recursive, 'content_root'):
         generate_pages_recursive.content_root = dir_path_content
@@ -88,29 +93,35 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
                 dest_item_path = os.path.join(dest_dir_path, html_filename)
 
                 # Generate the page
-                generate_page(src_item_path, template_path, dest_item_path)
+                generate_page(src_item_path, template_path, dest_item_path, basepath)
         elif os.path.isdir(src_item_path):
             # Recursively process subdirectories
-            generate_pages_recursive(src_item_path, template_path, dest_dir_path)
+            generate_pages_recursive(src_item_path, template_path, dest_dir_path, basepath)
 
 
 def main():
-    # Copy static files to public directory
+    # Get basepath from command line arguments, default to "/"
+    basepath = "/"
+    if len(sys.argv) > 1:
+        basepath = sys.argv[1]
+
+    print(f"Using basepath: {basepath}")
+
     # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
     static_path = os.path.join(project_root, "static")
-    public_path = os.path.join(project_root, "public")
+    docs_path = os.path.join(project_root, "docs")
 
     print("Starting static site generation...")
-    copy_static_to_public(static_path, public_path)
+    copy_static_to_public(static_path, docs_path)
     print("Static files copied successfully!")
 
     # Generate all pages recursively
     content_path = os.path.join(project_root, "content")
     template_path = os.path.join(project_root, "template.html")
 
-    generate_pages_recursive(content_path, template_path, public_path)
+    generate_pages_recursive(content_path, template_path, docs_path, basepath)
     print("All pages generated successfully!")
 
     # Example TextNode functionality (keeping for testing)
